@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypePrecision</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #111114;
+            --bg2: #17171b;
+            --bg3: #1d1d22;
+            --border: #252530;
+            --border2: #32323e;
+            --pending: #2a2a35;
+            --dim: #42424e;
+            --subtle: #606072;
+            --base: #888898;
+            --bright: #c8c8dc;
+            --white: #eeeef4;
+            --correct: #d0d0e4;
+            --error: #ff5566;
+            --accent: #7c6dfa;
+            --accent2: #a78bfa;
+            --accent-dim: rgba(124, 109, 250, 0.14);
+            --teal: #2dd4b8;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-ui: 'Syne', sans-serif;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--bright);
+            font-family: var(--font-ui);
+            overflow: hidden
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 44px 44px;
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, var(--bg) 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 109, 250, 0.07) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+            animation: orb-drift 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes orb-drift {
+            from {
+                transform: translate(-55%, -52%)
+            }
+
+            to {
+                transform: translate(-45%, -48%)
+            }
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 58px;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: rgba(17, 17, 20, 0.8);
+            backdrop-filter: blur(16px);
+            z-index: 20;
+        }
+
+        .logo {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--white);
+            letter-spacing: -0.03em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metrics {
+            display: flex;
+            align-items: stretch;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .metric {
+            padding: 0 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-right: 1px solid var(--border);
+        }
+
+        .metric:last-child {
+            border-right: none
+        }
+
+        .mlabel {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--dim);
+        }
+
+        .mval {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--subtle);
+            transition: color 0.2s;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .mval.on {
+            color: var(--accent2)
+        }
+
+        .mval.bad {
+            color: var(--error)
+        }
+
+        #stage {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 860px;
+            padding: 0 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.75rem;
+        }
+
+        .pre-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .prompt-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--dim);
+        }
+
+        .pill-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: pulse 2s ease infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.35
+            }
+        }
+
+        .char-count {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--dim);
+            letter-spacing: 0.06em;
+        }
+
+        .typing-card {
+            width: 100%;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 2.25rem 2.75rem 2.5rem;
+            position: relative;
+            transition: border-color 0.25s;
+            cursor: text;
+        }
+
+        .typing-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(124, 109, 250, 0.03) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .typing-card:focus-within {
+            border-color: var(--border2)
+        }
+
+        #hidden-input {
+            position: absolute;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            caret-color: transparent;
+        }
+
+        .typing-area {
+            font-family: var(--font-mono);
+            font-size: 19px;
+            line-height: 2.1;
+            letter-spacing: 0.02em;
+            word-break: break-all;
+            outline: none;
+        }
+
+        .ch {
+            display: inline;
+            color: var(--pending);
+            transition: color 0.05s;
+        }
+
+        .ch.correct {
+            color: var(--correct)
+        }
+
+        .ch.error {
+            color: var(--error)
+        }
+
+        .ch.sp {
+            display: inline-block;
+            width: 0.55em;
+            vertical-align: baseline;
+            position: relative;
+            color: transparent !important;
+        }
+
+        .ch.sp::after {
+            content: '·';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.1em;
+            line-height: 1;
+            color: var(--dim);
+            transition: color 0.05s;
+        }
+
+        .ch.sp.correct::after {
+            color: var(--border2)
+        }
+
+        .ch.sp.error::after {
+            color: var(--error)
+        }
+
+        .ch.sp.pending::after {
+            color: var(--dim)
+        }
+
+        .ch.cur::before {
+            content: '';
+            position: absolute;
+            left: -1px;
+            top: 0.1em;
+            height: 1.6em;
+            width: 2px;
+            background: var(--accent2);
+            border-radius: 1px;
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.8);
+            animation: blink 1.05s step-start infinite;
+        }
+
+        .ch {
+            position: relative
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0
+            }
+        }
+
+        .prog-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .prog-track {
+            flex: 1;
+            height: 3px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .prog-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--teal) 100%);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.12s cubic-bezier(.4, 0, .2, 1);
+            box-shadow: 0 0 8px rgba(124, 109, 250, 0.5);
+        }
+
+        .prog-pct {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--dim);
+            min-width: 30px;
+            text-align: right;
+        }
+
+        .hints {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--dim);
+            letter-spacing: 0.05em;
+        }
+
+        kbd {
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-family: inherit;
+            font-size: 10px;
+            color: var(--subtle);
+        }
+
+        .result-ov {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: rgba(17, 17, 20, 0.88);
+            backdrop-filter: blur(20px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result-ov.show {
+            display: flex;
+            animation: rFadeIn 0.4s cubic-bezier(.2, 0, .2, 1);
+        }
+
+        @keyframes rFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96) translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0)
+            }
+        }
+
+        .result-card {
+            width: min(700px, 92vw);
+            background: var(--bg2);
+            border: 1px solid var(--border2);
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 48px 96px rgba(0, 0, 0, 0.7),
+                0 0 0 1px rgba(124, 109, 250, 0.06);
+        }
+
+        .rc-top {
+            padding: 1.75rem 2.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .rc-title {
+            font-family: var(--font-ui);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--subtle);
+        }
+
+        .rc-wpm-badge {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--accent2);
+            background: var(--accent-dim);
+            border: 1px solid rgba(124, 109, 250, 0.25);
+            padding: 4px 14px;
+            border-radius: 999px;
+        }
+
+        .rc-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .rcstat {
+            padding: 2rem 1.25rem;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .rcstat:last-child {
+            border-right: none
+        }
+
+        .rcstat-lbl {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--dim);
+        }
+
+        .rcstat-val {
+            font-family: var(--font-mono);
+            font-size: 38px;
+            font-weight: 300;
+            color: var(--white);
+            line-height: 1;
+        }
+
+        .rcstat-val.hl {
+            color: var(--accent2)
+        }
+
+        .rcstat-unit {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--dim);
+        }
+
+        .rc-bottom {
+            padding: 1.1rem 2.25rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .next-btn {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            color: var(--accent2);
+            background: var(--accent-dim);
+            border: 1px solid rgba(124, 109, 250, 0.28);
+            padding: 0.55rem 1.4rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .next-btn:hover {
+            background: rgba(124, 109, 250, 0.22);
+            border-color: var(--accent);
+        }
+
+        .cd-txt {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--dim);
+        }
+
+        .focus-ov {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            background: rgba(17, 17, 20, 0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .focus-pill {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--subtle);
+            border: 1px solid var(--border2);
+            padding: 0.7rem 1.75rem;
+            border-radius: 12px;
+            background: var(--bg3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fp-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 1.4s ease infinite;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0)
+            }
+
+            20% {
+                transform: translateX(-5px)
+            }
+
+            60% {
+                transform: translateX(4px)
+            }
+        }
+
+        .shake {
+            animation: shake 0.16s ease
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="orb"></div>
+
+    <header>
+        <div class="logo">
+            TypePrecision
+        </div>
+        <div class="metrics">
+            <div class="metric">
+                <span class="mlabel">WPM</span>
+                <span class="mval" id="m-wpm">—</span>
+            </div>
+            <div class="metric">
+                <span class="mlabel">ACC</span>
+                <span class="mval" id="m-acc">—</span>
+            </div>
+            <div class="metric">
+                <span class="mlabel">ERR</span>
+                <span class="mval" id="m-err">0</span>
+            </div>
+            <div class="metric">
+                <span class="mlabel">TIME</span>
+                <span class="mval" id="m-time">0:00</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="stage">
+        <div class="pre-row">
+            <div class="prompt-pill">
+                <div class="pill-dot"></div>
+                <span id="prompt-label">developer prompt</span>
+            </div>
+            <span class="char-count" id="char-count"></span>
+        </div>
+
+        <div class="typing-card" id="typing-card">
+            <input id="hidden-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="none"
+                spellcheck="false" tabindex="0">
+            <div class="typing-area" id="typing-area"></div>
+        </div>
+
+        <div class="prog-row">
+            <div class="prog-track">
+                <div class="prog-fill" id="pbar"></div>
+            </div>
+            <span class="prog-pct" id="ppct">0%</span>
+        </div>
+
+        <div class="hints">
+            <span><kbd>·</kbd> = space</span>
+            <span><kbd>Tab</kbd> restart</span>
+            <span><kbd>Esc</kbd> new prompt</span>
+            <span>fix errors to advance</span>
+        </div>
+    </div>
+
+    <div class="result-ov" id="result-ov">
+        <div class="result-card">
+            <div class="rc-top">
+                <span class="rc-title">session complete</span>
+                <span class="rc-wpm-badge" id="r-badge">0 wpm</span>
+            </div>
+            <div class="rc-stats">
+                <div class="rcstat">
+                    <span class="rcstat-lbl">WPM</span>
+                    <span class="rcstat-val hl" id="r-wpm">0</span>
+                    <span class="rcstat-unit">words / min</span>
+                </div>
+                <div class="rcstat">
+                    <span class="rcstat-lbl">Accuracy</span>
+                    <span class="rcstat-val" id="r-acc">0%</span>
+                    <span class="rcstat-unit">keystrokes</span>
+                </div>
+                <div class="rcstat">
+                    <span class="rcstat-lbl">Errors</span>
+                    <span class="rcstat-val" id="r-err">0</span>
+                    <span class="rcstat-unit">mistakes</span>
+                </div>
+                <div class="rcstat">
+                    <span class="rcstat-lbl">Time</span>
+                    <span class="rcstat-val" id="r-time">0s</span>
+                    <span class="rcstat-unit">elapsed</span>
+                </div>
+            </div>
+            <div class="rc-bottom">
+                <button class="next-btn" id="next-btn">→ next prompt</button>
+                <span class="cd-txt" id="cd-txt">auto-next in 5s</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="focus-ov" id="focus-ov">
+        <div class="focus-pill">
+            <div class="fp-dot"></div>
+            click to start typing
+        </div>
+    </div>
+
+    <script>
+        const PROMPTS = [
+            "design a scalable REST API with JWT authentication, rate limiting, and role-based access control for a multi-tenant SaaS platform",
+            "build a responsive dashboard with real-time charts, collapsible sidebar navigation, and live data updates using websocket connections",
+            "refactor a monolithic e-commerce backend into loosely coupled microservices with an API gateway and centralized structured logging",
+            "implement a full-text search engine with fuzzy matching, relevance ranking, and faceted filtering for a large product catalog",
+            "set up a CI and CD pipeline with automated unit tests, integration tests, staging deployments, and one-click rollback strategies",
+            "create a component library with accessible, reusable UI elements, dark mode support, and comprehensive Storybook documentation",
+            "optimize slow database queries by adding proper indexes, rewriting N plus one patterns, and introducing a Redis caching layer",
+            "build a real-time collaborative document editor with operational transforms, cursor presence indicators, and conflict resolution logic",
+            "design a distributed task queue with priority levels, retry logic, dead letter queues, and automatic worker auto-scaling policies",
+            "implement an OAuth2 login flow with Google and GitHub providers, secure session persistence, and token refresh handling",
+            "create an automated data pipeline that ingests CSV uploads, validates schema, transforms records, and loads into a data warehouse",
+            "build a mobile-first progressive web app with offline support, push notifications, and reliable background sync capabilities",
+            "write a comprehensive test suite covering unit tests, integration tests, and end-to-end browser automation for the checkout flow",
+            "design a multi-region deployment architecture with active-active failover, cross-region data replication, and latency-based routing",
+            "implement a feature flag system with user targeting rules, gradual rollout percentages, and real-time remote toggle updates",
+            "build a developer CLI tool that scaffolds new projects, manages environment configs, and automates semantic release versioning",
+            "create a GraphQL API with batched queries, persisted operations, subscription support, and fine-grained field-level authorization",
+            "set up infrastructure as code using Terraform modules for networking, compute, storage, and security groups on the cloud",
+            "implement server-side pagination, cursor-based infinite scroll, and virtual list rendering for a table with millions of rows",
+            "design an event-driven architecture with domain events, event sourcing, CQRS pattern, and eventual consistency guarantees",
+            "build a PDF generation service that renders dynamic Handlebars templates, supports custom fonts, and handles high concurrency",
+            "create a webhook delivery system with HMAC signature verification, exponential backoff retries, and per-event delivery tracking",
+            "implement a recommendation engine using collaborative filtering, learned item embeddings, and personalized result ranking",
+            "write a zero-downtime migration strategy for moving a Postgres database to a distributed system with blue-green deployment",
+            "build an admin panel with full audit logging, granular role permissions, bulk action support, and exportable CSV and Excel reports",
+            "design a container orchestration setup with health checks, resource quotas, horizontal autoscaling, and rolling update strategies",
+            "implement end-to-end encryption for user messages with key rotation, forward secrecy, and a secure Diffie-Hellman key exchange",
+            "create a cloud cost monitoring dashboard that tracks spend by service and team with anomaly detection and budget alert emails",
+            "build a localization system supporting right-to-left languages, plural rules, locale-aware date formats, and lazy-loaded bundles",
+            "design a plugin architecture that lets third-party extensions hook into core application events without modifying source code",
+            "design a secure file upload service with antivirus scanning, signed URL access, MIME validation, and resumable multipart uploads",
+            "build a notification system that supports email, SMS, push, and in-app delivery with user preferences and retry handling",
+            "implement a distributed caching strategy with cache invalidation, stale-while-revalidate semantics, and per-tenant isolation",
+            "create a resilient payment processing workflow with idempotency keys, webhook reconciliation, and failed transaction recovery",
+            "design a chat backend with presence tracking, typing indicators, message delivery receipts, and offline message synchronization",
+            "build a fraud detection pipeline using streaming events, rule evaluation, anomaly scoring, and manual review queues",
+            "implement a media processing service that generates thumbnails, transcodes videos, extracts metadata, and stores assets in object storage",
+            "create a secrets management workflow for applications with key rotation, least-privilege access, and environment-specific policies",
+            "design a customer support ticketing platform with SLA rules, assignment automation, internal notes, and searchable conversation history",
+            "build a usage metering and billing system with event aggregation, tiered pricing rules, invoice generation, and failed payment retries",
+            "implement a secure password reset and account recovery flow with one-time tokens, expiration handling, and device verification",
+            "create an API observability stack with distributed tracing, structured logs, RED metrics, and alert routing for incident response",
+            "design a high-throughput event ingestion service with partitioning, deduplication, schema evolution, and exactly-once processing guarantees",
+            "build a marketplace backend supporting listings, escrow payments, dispute resolution, and seller payout scheduling",
+            "implement a session management system with concurrent session control, suspicious login detection, and forced logout capabilities",
+            "create a low-latency autocomplete service with prefix indexing, typo tolerance, popularity boosting, and query analytics",
+            "design a backup and disaster recovery strategy with point-in-time restore, encrypted snapshots, and automated recovery drills",
+            "build a tenant-aware analytics platform with event tracking, funnel analysis, retention cohorts, and exportable reports",
+            "implement a device management system for IoT clients with secure provisioning, firmware rollout waves, and heartbeat monitoring",
+            "create a moderation pipeline for user-generated content with rule-based filters, ML scoring, human review, and appeal workflows",
+            "design a compliance-ready audit system with immutable logs, retention policies, tamper detection, and investigator search tools",
+            "build a batch job scheduler with cron expressions, execution windows, dependency chaining, and failure notifications",
+            "implement a secure API key management platform with scoped permissions, usage quotas, rotation, and revocation support",
+            "create a dynamic form builder with drag-and-drop fields, conditional logic, validation rules, and schema versioning",
+            "design a subscription lifecycle engine with trials, proration, renewals, grace periods, and cancellation recovery campaigns",
+            "build a data export service that generates large CSV and JSON files asynchronously with progress tracking and signed download links",
+            "implement a semantic search system using vector embeddings, hybrid keyword retrieval, re-ranking, and tenant-specific relevance controls",
+            "create a release management workflow with canary deployments, automated health checks, feature gating, and rollback orchestration",
+            "design a domain-driven backend for a booking system with availability locking, waitlists, overbooking protection, and cancellation policies",
+            "build a privacy-focused user data management system with consent tracking, data retention enforcement, and right-to-erasure workflows"
+        ];
+
+        const KEYWORDS = {
+            A: ["Authentication", "API Gateway", "Autoscaling", "Active-Active", "Audit Logging", "Async Processing", "A/B Testing", "Access Control", "Admin Panel", "Analytics", "AWS", "Azure", "Airflow", "Ansible", "Apache Kafka", "ACID Transactions", "API Rate Limiting", "Application Load Balancer", "Async/Await", "Atomic Operations"],
+            B: ["Background Jobs", "Blue-Green Deployment", "Batch Processing", "Bcrypt", "Bazel", "BFF Pattern", "Benchmarking", "Backpressure", "Big-O Notation", "Brotli Compression", "Build Pipeline", "Bull Queue", "Buffer Overflow", "Business Logic", "Bytecode"],
+            C: ["CI/CD Pipeline", "Container Orchestration", "CQRS", "Circuit Breaker", "Caching Layer", "CloudFormation", "Canary Deployment", "CORS", "Cron Jobs", "Code Coverage", "Cassandra", "Celery", "CircuitPython", "ClickHouse", "Cloud Native", "Code Splitting", "Cold Start", "Columnar Storage", "Command Query", "ConfigMaps"],
+            D: ["Database Sharding", "Distributed Tracing", "Docker", "DynamoDB", "Dead Letter Queue", "Data Pipeline", "Domain-Driven Design", "DRY Principle", "Dependency Injection", "DevOps", "Dapr", "DataDog", "Database Indexing", "Data Mesh", "Delta Lake", "Distributed Cache", "Docker Compose", "Downtime", "DRY Code", "Data Validation"],
+            E: ["Event Sourcing", "ETL Pipeline", "Encryption", "Elasticsearch", "Error Boundaries", "E2E Testing", "Edge Computing", "Envoy Proxy", "Event Loop", "Exponential Backoff", "ECS", "EMR", "Ephemeral Storage", "ERD", "Event Bus", "EKS", "Elastic Beanstalk"],
+            F: ["Feature Flags", "Firebase", "Frontend Framework", "Full-Text Search", "Fault Tolerance", "File Upload", "Flux Pattern", "Functional Programming", "Fargate", "Federated Auth", "Flyway", "FastAPI", "Flask", "Firestore", "Fuzz Testing", "Frontend Proxy"],
+            G: ["GraphQL", "GitOps", "Golang", "Graceful Shutdown", "GCP", "GitHub Actions", "Gradle", "GRPC", "Geo-Replication", "Guice", "GitLab CI", "Gateway API", "GKE", "Gunicorn"],
+            H: ["Horizontal Scaling", "HashiCorp Vault", "Helm Charts", "Health Checks", "Hot Path", "Hibernate", "Hystrix", "HashiCorp", "High Availability", "Horizontal Pod Autoscaler", "HTTP/2", "HTTP/3", "HTTPS", "HAProxy", "Hot Reload", "HPA"],
+            I: ["Idempotency", "Infrastructure as Code", "Immutable Infrastructure", "Integration Testing", "Istio", "IndexedDB", "IAM Roles", "In-Memory Cache", "Image Optimization", "Incident Response", "InfluxDB", "Ingestion", "Init Containers", "Inline Cache", "Input Sanitization"],
+            J: ["JWT", "Java", "Jenkins", "JSON Schema", "Job Queue", "Jira", "JMeter", "Jupyter", "Just-In-Time Compiler", "JSON Web Tokens", "JOOQ", "Jackson", "JAX-RS", "JCache"],
+            K: ["Kubernetes", "Kafka", "Keycloak", "K6 Testing", "Knative", "Kong API Gateway", "Kinesis", "Keptn", "Kustomize", "Key Rotation", "KEDA", "Kibana", "Knative Serving"],
+            L: ["Load Balancer", "Laravel", "Lambda", "Laravel Vapor", "Leaky Bucket", "Liquibase", "Live Migration", "Leader Election", "Locking Mechanism", "Latency Monitoring", "Linkerd", "Log Aggregation", "Long Polling", "LRU Cache", "Load Testing"],
+            M: ["Microservices", "MongoDB", "Message Queue", "Middleware", "Maven", "Mutation Testing", "Multi-Tenancy", "Metrics", "Memcached", "Machine Learning", "Minikube", "Mocha", "MSTest"],
+            N: ["Node.js", "Nginx", "Netlify", "Next.js", "N+1 Problem", "Namespace Isolation", "Near Real-Time", "Network Policies", "NATS", "Non-Blocking I/O", "Neo4j", "New Relic"],
+            O: ["OAuth2", "Observability", "OpenTelemetry", "ORM", "Okta", "On-Call Rotation", "Optimistic Locking", "Outbox Pattern", "Operational Transform", "Over-Provisioning", "OTEL", "OAuth", "OAS", "OpenAPI", "OpsGenie"],
+            P: ["PostgreSQL", "Pub/Sub", "Prometheus", "PWA", "Pagination", "Playwright", "Progressive Enhancement", "Pod Disruption Budget", "Pessimistic Locking", "Preload", "Puppeteer", "Pino", "Plausible", "Packer"],
+            Q: ["Query Optimization", "Queue Management", "Quorum Reads", "Quality Gates", "Quickstart Guide", "Quota Enforcement", "Query Caching", "Queue Partitioning", "Query Planner", "Quantile", "Quarkus", "QueryDSL"],
+            R: ["Redis", "React", "Rate Limiting", "RBAC", "Rollout Strategy", "REST API", "React Query", "RethinkDB", "Read Replicas", "Resource Quotas", "RabbitMQ", "Rancher", "RSocket"],
+            S: ["Serverless", "SQL", "SaaS", "Security Headers", "Saga Pattern", "Service Mesh", "Sentry", "Slack Integration", "Schema Migration", "State Management", "Spring Boot", "Strapi", "Supabase", "SvelteKit", "SonarQube"],
+            T: ["TypeScript", "Terraform", "Testing Pyramid", "Tailwind CSS", "Token Refresh", "TDD", "Task Queue", "Throttling", "Two-Phase Commit", "Transaction Isolation", "TanStack Query", "Temporal", "Tilt", "Trino"],
+            U: ["Unit Testing", "User Journey", "UUID", "Uptime SLA", "User Onboarding", "URL Shortener", "User Segmentation", "Upgrade Strategy", "User Analytics", "Utility-First CSS", "Uvicorn", "URQL"],
+            V: ["Vue.js", "Vercel", "Validation Schema", "Version Control", "Virtual Private Cloud", "Vite", "Vector Database", "VPC Peering", "Validation Pipeline", "Version Pinning", "Vitess", "Vapor", "VRL"],
+            W: ["WebSocket", "Webpack", "Workflow Engine", "Write-Ahead Logging", "Webhooks", "WAF", "Worker Pool", "WASM", "Warm Start", "Write Skew", "Winston", "WireGuard"],
+            X: ["XSS Prevention", "XML Parsing", "X-Ray Tracing", "X-Frame-Options", "XPath", "XSS Filter", "XML Schema", "X-Forwarded-For", "X.509 Certificates", "Xen Orchestra", "Xdebug", "Xray"],
+            Y: ["YAML", "Yarn", "YOLO Deployment", "Year-over-Year", "Y-Combinator", "YAML Anchors", "Yarn Workspaces", "YubiKey", "Yellowfin BI", "Yarn Plug'n'Play", "YOLO CI", "YTT"],
+            Z: ["Zero Downtime", "ZooKeeper", "Zlib", "Zone Redundancy", "Zstandard", "Zero Trust", "Zig Programming", "ZFS", "Zlib Compression", "Zookeeper Ensemble", "Zed Editor", "Zapier"]
+        };
+
+        const KW_TEMPLATES = [
+            (kws) => `design a system integrating ${kws[0]}, ${kws[1]}, and ${kws[2]} while handling ${kws[3]}, ${kws[4]}, and ${kws[5]} at scale`,
+            (kws) => `build a backend service using ${kws[0]} and ${kws[1]} with support for ${kws[2]}, ${kws[3]}, ${kws[4]}, and ${kws[5]}`,
+            (kws) => `implement ${kws[0]} and ${kws[1]} patterns across ${kws[2]}, ${kws[3]}, and ${kws[4]} to achieve ${kws[5]} in production`,
+            (kws) => `architect a platform with ${kws[0]}, ${kws[1]}, and ${kws[2]} ensuring ${kws[3]}, ${kws[4]}, and ${kws[5]} across all services`,
+            (kws) => `integrate ${kws[0]}, ${kws[1]}, ${kws[2]}, and ${kws[3]} into a unified pipeline with ${kws[4]} and ${kws[5]} guarantees`,
+            (kws) => `migrate legacy infrastructure to use ${kws[0]}, ${kws[1]}, and ${kws[2]} with ${kws[3]}, ${kws[4]}, and ${kws[5]} built in`,
+            (kws) => `set up ${kws[0]} and ${kws[1]} for a service that requires ${kws[2]}, ${kws[3]}, ${kws[4]}, and ${kws[5]}`,
+            (kws) => `optimize a distributed system using ${kws[0]}, ${kws[1]}, and ${kws[2]} to improve ${kws[3]}, ${kws[4]}, and ${kws[5]}`,
+            (kws) => `combine ${kws[0]}, ${kws[1]}, and ${kws[2]} to deliver ${kws[3]}, ${kws[4]}, ${kws[5]}, and ${kws[6]} in a single release`,
+            (kws) => `deploy ${kws[0]} and ${kws[1]} with ${kws[2]}, ${kws[3]}, ${kws[4]}, ${kws[5]}, and ${kws[6]} across multiple environments`,
+        ];
+
+        function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+        function generateKeywordPrompt() {
+            const letters = shuffle(Object.keys(KEYWORDS)).slice(0, 7);
+            const kws = letters.map(l => rand(KEYWORDS[l]));
+            const template = rand(KW_TEMPLATES);
+            return template(kws);
+        }
+
+        let usedFixed = new Set();
+        let useKeyword = false; 
+
+        function pickPrompt() {
+            useKeyword = !useKeyword;
+
+            if (useKeyword) {
+                return generateKeywordPrompt();
+            }
+
+            if (usedFixed.size >= PROMPTS.length) usedFixed.clear();
+            const pool = PROMPTS.map((_, i) => i).filter(i => !usedFixed.has(i));
+            const i = pool[Math.floor(Math.random() * pool.length)];
+            usedFixed.add(i);
+            return PROMPTS[i];
+        }
+
+        let prompt = '', chars = [], cursor = 0;
+        let started = false, finished = false;
+        let startTime = null, raf = null;
+        let totalKeys = 0, totalErrors = 0;
+        let cdInt = null;
+
+        const ta = document.getElementById('typing-area');
+        const inp = document.getElementById('hidden-input');
+        const focOv = document.getElementById('focus-ov');
+        const resOv = document.getElementById('result-ov');
+        const pbar = document.getElementById('pbar');
+        const ppct = document.getElementById('ppct');
+        const plbl = document.getElementById('prompt-label');
+        const ccount = document.getElementById('char-count');
+        const mWpm = document.getElementById('m-wpm');
+        const mAcc = document.getElementById('m-acc');
+        const mErr = document.getElementById('m-err');
+        const mTime = document.getElementById('m-time');
+
+        function initTest() {
+            cancelAnimationFrame(raf);
+            clearInterval(cdInt);
+            resOv.classList.remove('show');
+
+            prompt = pickPrompt();
+            chars = Array(prompt.length).fill('pending');
+            cursor = 0; started = false; finished = false;
+            startTime = null; totalKeys = 0; totalErrors = 0;
+
+            mWpm.textContent = '—'; mWpm.className = 'mval';
+            mAcc.textContent = '—'; mAcc.className = 'mval';
+            mErr.textContent = '0'; mErr.className = 'mval';
+            mTime.textContent = '0:00';
+            pbar.style.width = '0%'; ppct.textContent = '0%';
+
+            const modeTag = useKeyword ? 'keyword mix' : 'dev prompt';
+            const preview = prompt.split(' ').slice(0, 3).join(' ') + '…';
+            plbl.textContent = modeTag + ' · ' + preview;
+            ccount.textContent = prompt.length + ' chars';
+
+            render();
+            inp.value = '';
+            inp.focus();
+        }
+
+        function render() {
+            ta.innerHTML = '';
+            for (let i = 0; i < prompt.length; i++) {
+                const isSpace = prompt[i] === ' ';
+                const span = document.createElement('span');
+                span.className = 'ch ' + (isSpace ? 'sp ' : '') + chars[i];
+                if (i === cursor && !finished) span.classList.add('cur');
+                span.textContent = isSpace ? '\u00a0' : prompt[i];
+                ta.appendChild(span);
+            }
+        }
+
+        function elapsed() { return startTime ? (Date.now() - startTime) / 1000 : 0; }
+        function fmtT(s) { return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); }
+        function calcWpm() {
+            const s = elapsed(); if (s < 0.5) return 0;
+            const c = chars.slice(0, cursor).filter(x => x === 'correct').length;
+            return Math.round((c / 5) / (s / 60));
+        }
+        function calcAcc() { return totalKeys > 0 ? Math.round((1 - totalErrors / totalKeys) * 100) : 100; }
+
+        function tick() {
+            if (!started || finished) return;
+            const w = calcWpm(), a = calcAcc(), s = elapsed();
+            const pct = Math.round((cursor / prompt.length) * 100);
+
+            mWpm.textContent = w; mWpm.className = 'mval' + (w > 0 ? ' on' : '');
+            mAcc.textContent = a + '%'; mAcc.className = 'mval' + (a >= 90 ? ' on' : a < 75 ? ' bad' : '');
+            mErr.textContent = totalErrors; mErr.className = 'mval' + (totalErrors > 5 ? ' bad' : '');
+            mTime.textContent = fmtT(s);
+            pbar.style.width = pct + '%'; ppct.textContent = pct + '%';
+
+            raf = requestAnimationFrame(tick);
+        }
+
+        function onKey(e) {
+            if (finished) return;
+            if ((e.ctrlKey || e.metaKey) && 'vcxa'.includes(e.key.toLowerCase())) { e.preventDefault(); return; }
+            if (e.key === 'Tab') { e.preventDefault(); initTest(); return; }
+            if (e.key === 'Escape') { e.preventDefault(); initTest(); return; }
+            if (e.key === 'Backspace') { e.preventDefault(); doBack(); return; }
+            if (e.key.length !== 1) return;
+            e.preventDefault();
+
+            if (!started) { started = true; startTime = Date.now(); raf = requestAnimationFrame(tick); }
+            doChar(e.key);
+        }
+
+        function doBack() {
+            if (cursor === 0) return;
+            cursor--; chars[cursor] = 'pending'; render();
+        }
+
+        function doChar(k) {
+            if (cursor >= prompt.length) return;
+            totalKeys++;
+            if (k === prompt[cursor]) {
+                chars[cursor] = 'correct'; cursor++;
+                render();
+                if (cursor === prompt.length) finishTest();
+            } else {
+                totalErrors++;
+                chars[cursor] = 'error';
+                mErr.textContent = totalErrors; mErr.className = 'mval bad';
+                render();
+                const spans = ta.querySelectorAll('.ch');
+                if (spans[cursor]) {
+                    spans[cursor].classList.remove('shake');
+                    void spans[cursor].offsetWidth;
+                    spans[cursor].classList.add('shake');
+                }
+            }
+        }
+
+        function finishTest() {
+            finished = true; cancelAnimationFrame(raf); render();
+            const s = elapsed(), w = calcWpm(), a = calcAcc();
+            mWpm.textContent = w; mAcc.textContent = a + '%';
+            mErr.textContent = totalErrors; mTime.textContent = fmtT(s);
+
+            document.getElementById('r-wpm').textContent = w;
+            document.getElementById('r-acc').textContent = a + '%';
+            document.getElementById('r-err').textContent = totalErrors;
+            document.getElementById('r-time').textContent = Math.round(s) + 's';
+            document.getElementById('r-badge').textContent = w + ' wpm';
+            resOv.classList.add('show');
+
+            let cd = 5;
+            const cdTxt = document.getElementById('cd-txt');
+            cdTxt.textContent = 'auto-next in ' + cd + 's';
+            cdInt = setInterval(() => {
+                cd--;
+                if (cd <= 0) { clearInterval(cdInt); initTest(); }
+                else cdTxt.textContent = 'auto-next in ' + cd + 's';
+            }, 1000);
+        }
+        function focusInput() { inp.focus(); focOv.style.display = 'none'; }
+        focOv.addEventListener('click', focusInput);
+        document.getElementById('typing-card').addEventListener('click', focusInput);
+        document.getElementById('next-btn').addEventListener('click', () => { clearInterval(cdInt); initTest(); });
+
+        inp.addEventListener('blur', () => { if (!finished && !resOv.classList.contains('show')) focOv.style.display = 'flex'; });
+        inp.addEventListener('focus', () => { focOv.style.display = 'none'; });
+        inp.addEventListener('paste', e => e.preventDefault());
+        inp.addEventListener('input', () => { inp.value = ''; });
+        document.addEventListener('keydown', onKey);
+        initTest();
+    </script>
+</body>
+
+</html>
