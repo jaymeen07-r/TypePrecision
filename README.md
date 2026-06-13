@@ -85,11 +85,15 @@ Open `index.html` in your browser
 ## 📁 Suggested Structure
 
 ```
-typeprecision/
- ├── index.html
- ├── style.css
- ├── script.js
- └── prompts.js
+TypePrecision/
+├── index.html
+├── style.css
+├── script.js
+├── prompts.js
+├── sitemap.xml
+├── robots.txt
+├── LICENSE
+└── README.md
 ```
 
 ---
@@ -124,4 +128,4 @@ This project focuses on building a **deterministic input system** where:
 
 ## 📄 License
 
-MIT License
+This project is licensed under the [MIT License](LICENSE)
